@@ -71,7 +71,7 @@ This project is a Django-based Referral System API that allows users to register
 - **Description:** Get details of the authenticated user.
 - **Headers:** Authorization: Bearer `<token>`
 
-### User Details
+### User Referrals Details
 
 - **URL:** `/api/referrals/`
 - **Method:** `GET`
