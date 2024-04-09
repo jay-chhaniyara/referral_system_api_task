@@ -7,35 +7,71 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from .serializers import *
 from .models import UserModel, Referral
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 
 class UserRegistrationView(APIView):
+
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    @swagger_auto_schema(
+        operation_description="User Regitrations",
+        responses={
+            200: "Success",
+            400: "Bad Request",
+            401: "Unauthorized",
+        },
+        request_body=UserSerializer,
+
+    )
     def post(self, request):
         serializer = UserSerializer(data=request.data)
-        # to check input data is vaild or not 
+        # to check input data is vaild or not
         if serializer.is_valid():
-            user = serializer.save()
             referral_code = request.data.get('referral_code')
             # it will check referral code is available or not
             if referral_code:
-                
+
                 try:
                     referred_by = UserModel.objects.get(
                         refer_code=referral_code)
-                
+
                 except UserModel.DoesNotExist:
                     return Response("Referral code is invalid", status=status.HTTP_400_BAD_REQUEST)
 
+                user = serializer.save()
                 Referral.objects.create(user=user, referred_by=referred_by)
-            # it will return user id and sucesse message on user register
+            else:
+                user = serializer.save()
+
+                # it will return user id and sucesse message on user register
             return Response({"user_id": user.id, "message": "User created successfully"}, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserLoginView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="User Login",
+        responses={
+            200: "Success",
+            400: "Bad Request",
+            401: "Unauthorized",
+        },
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'email': openapi.Schema(type=openapi.TYPE_STRING, description='Email of the user'),
+                'password': openapi.Schema(type=openapi.TYPE_STRING, description='Password of the user', format='password'),
+            },
+            required=['email', 'password'],
+        )
+    )
     def post(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
@@ -55,6 +91,8 @@ class UserLoginView(APIView):
             return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
 # It will give user details based on logged user
+
+
 class UserDetailsView(APIView):
     def get(self, request):
         user = request.user
@@ -72,6 +110,8 @@ class UserDetailsView(APIView):
             return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
 # It will give all referral user detail of logged user
+
+
 class UserReferralView(APIView):
     pagination_class = PageNumberPagination
 
